@@ -1,1 +1,5 @@
 .idea
+**.ttl
+**.nt
+**.DS_Store
+**__pycache__
