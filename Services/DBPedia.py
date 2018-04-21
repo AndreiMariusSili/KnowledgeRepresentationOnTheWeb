@@ -27,9 +27,10 @@ class DBPedia:
                     self.__sparql.setQuery(Queries.dbpedia_uris_to_resources(uri_string, 'Film'))
                     response = self.__sparql.query().convert()
                 except Exception as e:
+                    skipped += len(uri_chunk)
                     logging.warning("Exception occurred. Skipped so far: {}".format(skipped))
                     pprint.pprint(uri_chunk)
-                    skipped += len(uri_chunk)
+
                     continue
 
                 output.write(response)
