@@ -1,9 +1,8 @@
 from SPARQLWrapper import SPARQLWrapper, JSON, POST
-from typing import Dict, List, Tuple
+from typing import Dict, Tuple
 from SPARQL import Queries
-from rdflib import Graph, URIRef, Namespace, namespace
+from rdflib import Graph, URIRef, namespace
 import urllib.parse
-import logging
 
 
 class Stardog:
@@ -14,6 +13,7 @@ class Stardog:
         self.__endpoint = "http://localhost:5820/BestLinkedMovieDatabase/query"
         self.__sparql = SPARQLWrapper(self.__endpoint)
         self.__sparql.setReturnFormat(JSON)
+        self.__sparql.setMethod(POST)
 
     def get_movies(self) -> Tuple:
         self.__sparql.setQuery(Queries.lmdb_movies_to_dbpedia_uris())
@@ -42,12 +42,9 @@ class Stardog:
             lmdb_resource = URIRef(lmdb_resource)
             dbp_uri = URIRef(dbp_uri.replace('"', "").replace("'", "").replace("`", ""))
             cleaned_graph.add((lmdb_resource, namespace.OWL.sameAs, dbp_uri))
-
         cleaned_graph.serialize('Data/CleanedLMDBMovieSameAs.ttl', format='turtle')
 
-        # It is now safe to import the cleaned data using stardog.
-
-        return cleaned_graph
+        return cleaned_graph # It is now safe to import the cleaned data using stardog.
 
     def clean_actor_uris(self, uris) -> Graph or None:
         cleaned_graph = Graph()
@@ -62,12 +59,9 @@ class Stardog:
             lmdb_resource = URIRef(lmdb_resource)
             dbp_uri = URIRef(dbp_uri.replace('"', "").replace("'", "").replace("`", ""))
             cleaned_graph.add((lmdb_resource, namespace.OWL.sameAs, dbp_uri))
-
         cleaned_graph.serialize('Data/CleanedLMDBActorSameAs.ttl', format='turtle')
 
-        # It is now safe to import the cleaned data using stardog.
-
-        return cleaned_graph
+        return cleaned_graph # It is now safe to import the cleaned data using stardog.
 
     def remove_movie_bad_uris(self):
         self.__sparql = SPARQLWrapper('http://localhost:5820/BestLinkedMovieDatabase/update')

@@ -5,7 +5,7 @@ import logging
 logging.basicConfig(level=logging.INFO)
 
 if __name__ == "__main__":
-    action = "remove_bad_actor_refs"
+    action = "lmdb_actor_to_dbpedia"
 
     if action == "discover":
         with TheMovieDatabase() as tmdb:

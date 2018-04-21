@@ -18,20 +18,12 @@ class DBPedia:
 
     def match_movies(self, uri_chunks: Tuple):
         response = None
-        skipped = 0
         with open('Data/DBPediaMovies.ttl', 'wb') as output:
             for uri_chunk in uri_chunks:
                 uri_string = "(" + "".join(uri + "," for uri in uri_chunk)[:-1] + ")"
 
-                try:
-                    self.__sparql.setQuery(Queries.dbpedia_uris_to_resources(uri_string, 'Film'))
-                    response = self.__sparql.query().convert()
-                except Exception as e:
-                    skipped += len(uri_chunk)
-                    logging.warning("Exception occurred. Skipped so far: {}".format(skipped))
-                    pprint.pprint(uri_chunk)
-
-                    continue
+                self.__sparql.setQuery(Queries.dbpedia_uris_to_resources(uri_string, 'Film'))
+                response = self.__sparql.query().convert()
 
                 output.write(response)
                 output.flush()
@@ -40,19 +32,12 @@ class DBPedia:
 
     def match_actors(self, uri_chunks: Tuple):
         response = None
-        skipped = 0
         with open('Data/DBPediaActors.ttl', 'wb') as output:
             for uri_chunk in uri_chunks:
                 uri_string = "(" + "".join(uri + "," for uri in uri_chunk)[:-1] + ")"
 
-                try:
-                    self.__sparql.setQuery(Queries.dbpedia_uris_to_resources(uri_string, 'Person'))
-                    response = self.__sparql.query().convert()
-                except Exception as e:
-                    skipped += len(uri_chunk)
-                    logging.warning("Exception occurred. Skipped so far: {}".format(skipped))
-                    pprint.pprint(uri_chunk)
-                    continue
+                self.__sparql.setQuery(Queries.dbpedia_uris_to_resources(uri_string, 'Person'))
+                response = self.__sparql.query().convert()
 
                 output.write(response)
                 output.flush()
