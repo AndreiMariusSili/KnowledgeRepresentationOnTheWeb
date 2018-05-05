@@ -1,5 +1,6 @@
 .idea
 **.ttl
 **.nt
+**.pkl
 **.DS_Store
 **__pycache__
