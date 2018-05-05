@@ -38,6 +38,7 @@ class InstanceMatcher:
 
         for row in x.result:
             d[row] = True
+            print(row)
 
         return d
 
@@ -55,9 +56,10 @@ class InstanceMatcher:
         counter = 0
 
         for key in first_col:
-            if first_col[key] is True & second_col[key] is True:
-                con.update(key)
-                counter += 1
+            if key in first_col:
+                if key in second_col:
+                    con.update(key)
+                    counter += 1
         print("con is ",counter)
         print("con the same is ",len(con))
 
@@ -77,9 +79,10 @@ class InstanceMatcher:
         counter = 0
 
         for key in first_col:
-            if first_col[key] is True & second_col[key] is False:
-                dis.update(key)
-                counter += 1
+            if key in first_col:
+                if key in second_col:
+                    dis.update(key)
+                    counter += 1
         print("dis is ",counter)
         print("dis the same is ",len(dis))
 
@@ -97,10 +100,31 @@ class InstanceMatcher:
 
         d1 = self.__load_instances(" ", " ")
         #d2 = self.__load_instances(" ", " ")
-        common_set, len_common = self.__get_conjunction(d1,d1)
-        not_common_set, len_not_common = self.__get_disjunction(d1,d1)
+        #d2 = dict(d1.items())[len(d1) / 2:]
 
-        ja_sim = int(len_common) / len(d1) + len(d1) - int(len_common)
+        # half_dict = int(len(d1)/2)
+        # d2 = defaultdict(bool)
+        # counter = 0
+        # for key in d1:
+        #     d2[key] = True
+        #     counter += 1
+        #     if counter >= half_dict:
+        #         break
+        # print("how many",len(d2))
+
+        d2 = defaultdict(bool, list(d1.items())[0:int(len(d1) / 2)])
+        print("d2 ",len(d2))
+
+
+        common_set, len_common = self.__get_conjunction(d1,d2)
+        not_common_set, len_not_common = self.__get_disjunction(d1,d2)
+
+        ja_sim = int(len_common) / (len(d1) + len(d2) - int(len_common))
+        print("d1 ",len(d1))
+        print("d2 ",len(d2))
+
+        print("common ",len_common)
+
         print("Similarity ",ja_sim)
 
 
