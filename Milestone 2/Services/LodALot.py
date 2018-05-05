@@ -1,6 +1,7 @@
 import logging
 import os
 import pickle
+import urllib.parse
 from typing import Iterable
 
 import rdflib
@@ -71,15 +72,14 @@ class LodALot:
         return self.__convert_to_rdf_graph()
 
     def __convert_to_rdf_graph(self) -> None:
-        graph = rdflib.Graph()
+        self.__graph = rdflib.Graph()
         with open(self.__file_path, 'r') as triples:
             for tr in triples:
-                tr = tr.replace('\n', '')
                 try:
-                    graph += rdflib.Graph().parse(data=tr, format='nt')
+                    self.__graph += rdflib.Graph().parse(data=tr, format='nt')
                 except Exception as e:
                     logging.error(e)
-        pickle.dump(graph, open(self.__graph_path, 'wb+'))
+        pickle.dump(self.__graph, open(self.__graph_path, 'wb+'))
 
     @staticmethod
     def count_triples(obj: str = None) -> int:
@@ -98,11 +98,12 @@ class LodALot:
 
         return count_triples.text
 
-    def get_instances(self, prop_uri: str) -> Iterable[str]:
+    def get_instances(self, prop_uri: str, unquote: bool) -> Iterable[str]:
         """Get all the instances of a particular LMDB class.
 
         Args:
-            prop_uri: the property values that will be retrieved.
+            prop_uri: The property values that will be retrieved.
+            unquote: Whether to unquote the string.
 
         Returns:
             A map of instances.
@@ -114,9 +115,22 @@ class LodALot:
                 SELECT ?sub WHERE {
                     ?sub a dbo:Film
             }""")
-            return map(lambda uri_tuple: str(uri_tuple[0]), results)
+            if unquote:
+                return map(self.unquote_uri, results)
+            else:
+                return map(lambda uri_tuple: uri_tuple[0], results)
         else:
             pass
+
+    @staticmethod
+    def unquote_uri(uri_tuple: tuple) -> str:
+        """Unquote a URI.
+
+        Returns:
+            An unquoted uri as a string
+        """
+        uri_str = str(uri_tuple[0])
+        return urllib.parse.unquote(uri_str)
 
 
 if __name__ == '__main__':
