@@ -12,20 +12,21 @@ logging.basicConfig(level='INFO')
 
 class LMDB:
 
-    def __init__(self, data_path: str, reset: bool = False):
+    def __init__(self, data_path: str, reset: bool = False, graph_only: bool = False):
         self._data_path = data_path
         self._original_file_path = os.path.join(data_path, 'Original.nt')
         self._cleaned_file_path = os.path.join(data_path, 'Cleaned.nt')
         self._malformed_file_path = os.path.join(data_path, 'Malformed.nt')
         self._graph_file_path = os.path.join(data_path, 'Graph.pkl')
         self.reset = reset
+        self.graph_only = graph_only
 
-    def __enter__(self):
         if os.path.isfile(self._original_file_path):
-            self._original_file = open(self._original_file_path, 'r')
-            self._original_file_size = sum([1 for _ in self._original_file.readlines()])
-            self._original_file.close()
-            self._original_file = open(self._original_file_path, 'r')
+            if not not self.graph_only:
+                self._original_file = open(self._original_file_path, 'r')
+                self._original_file_size = sum([1 for _ in self._original_file.readlines()])
+                self._original_file.close()
+                self._original_file = open(self._original_file_path, 'r')
         else:
             raise Exception(
                 'Original file {} does not exist'.format(os.path.join(os.getcwd(), self._original_file_path)))
@@ -36,32 +37,32 @@ class LMDB:
             os.remove(self._malformed_file_path)
 
         self._cleaned_file_size = 0
-        if os.path.isfile(self._cleaned_file_path):
+        if os.path.isfile(self._cleaned_file_path) and not self.graph_only:
             self._cleaned_file = open(self._cleaned_file_path, 'r+')
             self._cleaned_file_size = sum(1 for _ in self._cleaned_file.readlines())
             self._cleaned_file.close()
         self._cleaned_file = open(self._cleaned_file_path, 'ab+')
 
         self._malformed_file_size = 0
-        if os.path.isfile(self._malformed_file_path):
+        if os.path.isfile(self._malformed_file_path) and not self.graph_only:
             self._malformed_file = open(self._malformed_file_path, 'r+')
             self._malformed_file_size = sum(1 for _ in self._malformed_file.readlines())
             self._malformed_file.close()
         self._malformed_file = open(self._malformed_file_path, 'ab+')
 
         if os.path.isfile(self._graph_file_path):
-            logging.info('Loading from pickle.')
+            logging.info('Loading graph from pickle.')
             self._graph_file = open(self._graph_file_path, 'rb')
             self._graph: rdflib.Graph = pickle.load(self._graph_file)
+            logging.info('Loading done.')
         else:
             logging.info('No graph file to load.')
             self._graph_file = open(self._graph_file_path, 'wb+')
 
+    def __enter__(self):
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        self._cleaned_file.flush()
-
         self._original_file.close()
         self._cleaned_file.close()
         self._malformed_file.close()
@@ -92,47 +93,38 @@ class LMDB:
 
         return valid_graph
 
-    def get_instances(self, class_uri: str) -> dict:
+    def get_instances(self, cls_uri: str, prop_uri: str, unquote: bool) -> Iterable[str]:
         """Get all the instances of a particular LMDB class.
 
         Args:
-            class_uri: The URI of the class for which instances will be retrieved.
+            cls_uri: The URI of the class for which instances will be retrieved.
+            prop_uri: the property values that will be retrieved.
+            unquote: Whether to unquote the property uri.
 
         Returns:
             Dictionary of instances.
         """
-
-        return {}
-
-    def count_instances(self, class_uri: str) -> int:
-        """Count the instances of a particular LMDB class.
-
-        Args:
-            class_uri: The URI of the class for which instances will be retrieved.
-
-        Returns:
-            Number of instances in the class.
-        """
-
-        return 0
+        results = self._graph.query("""
+            PREFIX owl: <http://www.w3.org/2002/07/owl#>
+            PREFIX lmdbm: <http://data.linkedmdb.org/resource/movie/>
+            SELECT ?obj WHERE {{
+                ?sub rdf:type {cls} .
+                ?sub {prop} ?obj .
+            }}""".format(cls=cls_uri, prop=prop_uri))
+        if unquote:
+            return map(self.unquote_uri, results)
+        else:
+            return map(lambda x: x, results)
 
     @staticmethod
-    def unquote_triple(graph: rdflib.Graph) -> rdflib.Graph:
-        """Clean all the URIS in a triple by unqoting them.
+    def unquote_uri(uri_tuple: tuple) -> str:
+        """Unquote a URI.
 
         Returns:
-            A string of unquoted uris
+            An unquoted uri as a string
         """
-        unqoted_graph = rdflib.Graph()
-        unquoted_triple = []
-        for triple in graph:
-            for uri in triple:
-                if 'http://' in uri:
-                    unquoted_triple.append(rdflib.URIRef(urllib.parse.unquote(uri)))
-                else:
-                    unquoted_triple.append(rdflib.Literal(uri))
-        unqoted_graph.add(unquoted_triple)
-        return unqoted_graph
+        uri_str = str(uri_tuple[0])
+        return urllib.parse.unquote(uri_str)
 
     @staticmethod
     def clean_triples(triples: Iterable[str]):
@@ -161,6 +153,3 @@ class LMDB:
 if __name__ == '__main__':
     with LMDB(data_path=os.path.join('..', 'Data', 'LMDB')) as lmdb:
         lmdb.build_valid_graph()
-
-    # with LMDB(data_path=os.path.join('..', 'Data', 'LMDB')) as lmdb:
-    #     lmdb.unquote_uris()

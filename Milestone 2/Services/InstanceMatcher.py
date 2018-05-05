@@ -1,4 +1,10 @@
 import collections as cl
+import os
+
+import rdflib
+
+from Services.LMDB import LMDB
+from Services.LodALot import LodALot
 
 
 class InstanceMatcher:
@@ -8,46 +14,38 @@ class InstanceMatcher:
     second_instance: dict
     second_col: cl.defaultdict
 
-    def __init__(self, first_instances: str, first_lookup: str, second_instances: str, second_lookup: str):
+    def __init__(self, first_instances: dict, first_lookup: str, second_instances: dict, second_lookup: str):
         pass
 
-    def __load_instances(self, instances: str, lookup: str) -> cl.defaultdict:
+    @staticmethod
+    def __load_instances(instances: dict, lookup: str) -> cl.defaultdict:
         """Process a dictionary of instances into a default dict of the form (URI: boolean)
 
         Args:
             instances: A dictionary of instances as returned by LMDB or LOD-A-LOT services.
             lookup:
-
-            ??Maybe query as argument too? and which graph
-
         Returns:
-
+            The instances loaded as a defaultdict(bool)
         """
-        import rdflib
-        from rdflib import Graph
 
-        #INIT DEF DICT
-        from collections import defaultdict
-        d = defaultdict(bool)
-
-        #QUERY GRAPH
-        g = Graph()
-        gr = g.parse("Movie_Graph.nt", format='turtle')
-        q = "SELECT  DISTINCT  ?sub  WHERE {            ?sub a <http://dbpedia.org/ontology/Film>   .            }"
-        x = gr.query(q)
-
+        d = cl.defaultdict(bool)
+        g = rdflib.Graph().parse("Movie_Graph.nt", format='turtle')
+        x = g.query("""SELECT DISTINCT  ?sub  WHERE {
+                ?sub a <http://dbpedia.org/ontology/Film> .
+            }""")
         for row in x.result:
             d[row] = True
             print(row)
 
         return d
 
-    def __get_conjunction(self, first_col: cl.defaultdict, second_col: cl.defaultdict) -> (set, int):
+    @staticmethod
+    def __get_conjunction(first_col: cl.defaultdict, second_col: cl.defaultdict) -> (set, int):
         """ Compute the conjunctive set of the 2 collections.
 
         Args:
-            first_col: DefaultDict as returned by self.load_instances.
-            second_col: DefaultDict as returned by self.load_instances.
+            first_col: defaultdict as returned by self.load_instances.
+            second_col: defaultdict as returned by self.load_instances.
 
         Returns:
             The conjunctive set and its cardinality.
@@ -56,36 +54,34 @@ class InstanceMatcher:
         counter = 0
 
         for key in first_col:
-            if key in first_col:
-                if key in second_col:
-                    con.update(key)
-                    counter += 1
-        print("con is ",counter)
-        print("con the same is ",len(con))
+            if key in first_col and key in second_col:
+                con.update(key)
+                counter += 1
+        print("con is ", counter)
+        print("con cardinality ", len(con))
 
         return con, len(con)
 
-    def __get_disjunction(self, first_col: cl.defaultdict, second_col: cl.defaultdict) -> (set, int):
+    @staticmethod
+    def __get_union(first_col: cl.defaultdict, second_col: cl.defaultdict) -> (set, int):
         """ Compute the disjunctive set of the 2 collections.
 
             Args:
-                first_col: DefaultDict as returned by self.load_instances.
-                second_col: DefaultDict as returned by self.load_instances.
+                first_col: defaultdict as returned by self.load_instances.
+                second_col: defaultdict as returned by self.load_instances.
 
             Returns:
-                The disjunctive set and its cardinality.
+                The union set and its cardinality.
             """
         dis = set()
         counter = 0
 
         for key in first_col:
-            if key in first_col:
-                if key in second_col:
-                    dis.update(key)
-                    counter += 1
-        print("dis is ",counter)
-        print("dis the same is ",len(dis))
-
+            if key in first_col or key in second_col:
+                dis.update(key)
+                counter += 1
+        print("dis is ", counter)
+        print("dis the same is ", len(dis))
 
         return dis, len(dis)
 
@@ -96,48 +92,28 @@ class InstanceMatcher:
         Returns:
             The Jaccard similarity between 2 measures.
         """
-        from collections import defaultdict
 
-        d1 = self.__load_instances(" ", " ")
-        #d2 = self.__load_instances(" ", " ")
-        #d2 = dict(d1.items())[len(d1) / 2:]
-
-        # half_dict = int(len(d1)/2)
-        # d2 = defaultdict(bool)
-        # counter = 0
-        # for key in d1:
-        #     d2[key] = True
-        #     counter += 1
-        #     if counter >= half_dict:
-        #         break
-        # print("how many",len(d2))
-
-        d2 = defaultdict(bool, list(d1.items())[0:int(len(d1) / 2)])
-        print("d2 ",len(d2))
-
-
-        common_set, len_common = self.__get_conjunction(d1,d2)
-        not_common_set, len_not_common = self.__get_disjunction(d1,d2)
+        d1 = self.__load_instances({}, " ")
+        d2 = cl.defaultdict(bool, list(d1.items())[0:int(len(d1) / 2)])
+        print("d2 ", len(d2))
+        common_set, len_common = self.__get_conjunction(d1, d2)
+        not_common_set, len_not_common = self.__get_union(d1, d2)
 
         ja_sim = int(len_common) / (len(d1) + len(d2) - int(len_common))
-        print("d1 ",len(d1))
-        print("d2 ",len(d2))
+        print("d1 ", len(d1))
+        print("d2 ", len(d2))
 
-        print("common ",len_common)
-
-        print("Similarity ",ja_sim)
-
-
-
+        print("common ", len_common)
+        print("Similarity ", ja_sim)
 
         return 0.5
 
+
 if __name__ == '__main__':
+    with LMDB(os.path.join('..', 'Data', 'LMDB')) as lmdb:
+        lmdb_instances = lmdb.get_instances()
+    with LodALot() as lol:
+        lol_instances = lol.get_instances()
 
-    a = InstanceMatcher(" "," "," "," ")
-    a.get_similarity("")
-    #a.count_triples()
-
-    print("hey")
-
-    #pass
+    with InstanceMatcher(lmdb_instances, 'owl:sameAs', lol_instances, 'subject') as im:
+        im.get_similarity("jaccard")
