@@ -8,17 +8,16 @@ from Services.LodALot import LodALot
 
 
 class InstanceMatcher:
-    first_instances: dict
-    first_col: cl.defaultdict
+    first_instances: map
+    first_set: set
 
-    second_instance: dict
-    second_col: cl.defaultdict
+    second_instances: map
+    second_set: set
 
-    def __init__(self, first_instances: dict, first_lookup: str, second_instances: dict, second_lookup: str):
+    def __init__(self, first_instances: map, first_lookup: str, second_instances: map, second_lookup: str):
         pass
 
-    @staticmethod
-    def __load_instances(instances: dict, lookup: str) -> cl.defaultdict:
+    def __load_instances(self) :
         """Process a dictionary of instances into a default dict of the form (URI: boolean)
 
         Args:
@@ -28,19 +27,22 @@ class InstanceMatcher:
             The instances loaded as a defaultdict(bool)
         """
 
-        d = cl.defaultdict(bool)
-        g = rdflib.Graph().parse("Movie_Graph.nt", format='turtle')
-        x = g.query("""SELECT DISTINCT  ?sub  WHERE {
-                ?sub a <http://dbpedia.org/ontology/Film> .
-            }""")
-        for row in x.result:
-            d[row] = True
-            print(row)
+        set_a = set()
+        set_b = set()
 
-        return d
+        for x in self.first_instances:
+            set_a.update(str(x))
 
-    @staticmethod
-    def __get_conjunction(first_col: cl.defaultdict, second_col: cl.defaultdict) -> (set, int):
+        for y in self.second_instances:
+            set_b.update(str(y))
+
+        self.first_set = set_a
+        self.second_set =set_b
+
+        return ""
+
+
+    def __get_conjunction(self) -> (set):
         """ Compute the conjunctive set of the 2 collections.
 
         Args:
@@ -50,20 +52,14 @@ class InstanceMatcher:
         Returns:
             The conjunctive set and its cardinality.
         """
-        con = set()
-        counter = 0
+        con_set = set()
+        con_set.update(self.first_set.intersection(self.second_set))
 
-        for key in first_col:
-            if key in first_col and key in second_col:
-                con.update(key)
-                counter += 1
-        print("con is ", counter)
-        print("con cardinality ", len(con))
+        print("con cardinality ", len(con_set))
 
-        return con, len(con)
+        return con_set
 
-    @staticmethod
-    def __get_union(first_col: cl.defaultdict, second_col: cl.defaultdict) -> (set, int):
+    def __get_disjunction(self,first_col: cl.defaultdict, second_col: cl.defaultdict) -> (set, int):
         """ Compute the disjunctive set of the 2 collections.
 
             Args:
@@ -73,17 +69,12 @@ class InstanceMatcher:
             Returns:
                 The union set and its cardinality.
             """
-        dis = set()
-        counter = 0
+        dis_set = set()
+        dis_set.update(self.first_set.union(self.second_set))
 
-        for key in first_col:
-            if key in first_col or key in second_col:
-                dis.update(key)
-                counter += 1
-        print("dis is ", counter)
-        print("dis the same is ", len(dis))
+        print("dis cardinality ", len(dis_set))
 
-        return dis, len(dis)
+        return dis_set
 
     def get_similarity(self, sim_type: str) -> float:
         """ Compute the similarity of 2 classes.
@@ -93,20 +84,14 @@ class InstanceMatcher:
             The Jaccard similarity between 2 measures.
         """
 
-        d1 = self.__load_instances({}, " ")
-        d2 = cl.defaultdict(bool, list(d1.items())[0:int(len(d1) / 2)])
-        print("d2 ", len(d2))
-        common_set, len_common = self.__get_conjunction(d1, d2)
-        not_common_set, len_not_common = self.__get_union(d1, d2)
+        conjunction_set = self.__get_conjunction()
+        disjunction_set = self.__get_disjunction()
 
-        ja_sim = int(len_common) / (len(d1) + len(d2) - int(len_common))
-        print("d1 ", len(d1))
-        print("d2 ", len(d2))
+        jaccard_sim = len(conjunction_set)/len(disjunction_set)
 
-        print("common ", len_common)
-        print("Similarity ", ja_sim)
+        print("Jaccard Similarity ", jaccard_sim)
 
-        return 0.5
+        return jaccard_sim
 
 
 if __name__ == '__main__':
