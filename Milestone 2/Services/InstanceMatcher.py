@@ -84,10 +84,15 @@ class InstanceMatcher:
             The Jaccard similarity between 2 measures.
         """
 
-        conjunction_set = self.__get_conjunction()
-        disjunction_set = self.__get_disjunction()
+        if sim_type == "jaccard":
+            conjunction_set = self.__get_conjunction()
+            disjunction_set = self.__get_disjunction()
+            jaccard_sim = len(conjunction_set)/len(disjunction_set)
 
-        jaccard_sim = len(conjunction_set)/len(disjunction_set)
+        else:
+            raise Exception('Similarity measure not implemented: {}'.format(sim_type))
+
+
 
         print("Jaccard Similarity ", jaccard_sim)
 
