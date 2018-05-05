@@ -134,11 +134,8 @@ class LodALot:
 
 
 if __name__ == '__main__':
-    logging.info('Info message')
-
-    a = LodALot(os.path.join('..', 'Data', 'LodALot', 'RawTriples'))
-    a.get_triples("", "", '<http://dbpedia.org/ontology/Film>')
-
-    print("hey")
-
-    # pass
+    lal = LodALot(os.path.join('..', 'Data', 'LodALot', 'DBPediaFilmTriples.nt'),
+                  os.path.join('..', 'Data', 'LodALot', 'DBPediaFilmGraph.pkl'))
+    lal.get_triples(sub="",
+                    pred="<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>",
+                    obj='<http://dbpedia.org/ontology/Film>')

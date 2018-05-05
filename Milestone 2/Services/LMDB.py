@@ -142,7 +142,6 @@ class LMDB:
             triple = triple.rstrip('\n')
             try:
                 valid_triple = rdflib.Graph().parse(data=triple, format='nt')
-                valid_triple = LMDB.unquote_triple(valid_triple)
                 partial_graph += valid_triple
             except Exception as e:
                 partial_malformed_triples.append(triple + '\n')
