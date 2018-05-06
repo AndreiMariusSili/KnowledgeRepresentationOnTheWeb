@@ -1,8 +1,6 @@
 import logging
 import os
 import pickle
-import urllib.parse
-from typing import Iterable
 
 import rdflib
 import requests
@@ -27,16 +25,13 @@ class LodALot:
     def __exit__(self, exc_type, exc_val, exc_tb):
         pass
 
-    def get_triples(self, sub: str = None, pred: str = None, obj: str = None) -> None:
+    def build_graph_from_triples(self, sub: str = None, pred: str = None, obj: str = None) -> None:
         """Get all the triples from LOD-A-LOT that match a specific pattern. Write the results to a file.
 
         Args:
             sub: The subject to match as a URI. If None, will match all subjects.
             pred: The predicate to match as URI. If None, will match all predicates.
             obj: The object to match as URI. If None, will match all objects.
-
-        Returns:
-            Dictionary of matching triples.
         """
         page = 1
         page_size = 1000
@@ -85,12 +80,12 @@ class LodALot:
     def count_triples(obj: str = None) -> int:
         """Count all the triples from LOD-A-LOT that match a specific pattern.
 
-                Args:
-                    obj: The object to match as URI. If None, will match all objects.
+        Args:
+            obj: The object to match as URI. If None, will match all objects.
 
-                Returns:
-                    Number of triples matching patterns
-                """
+        Returns:
+            Number of triples matching patterns
+        """
         headers = {'Accept': 'application/json'}
         payload = {'o': str(obj), 'g': '<https://hdt.lod.labs.vu.nl/graph/LOD-a-lot>'}
         url = 'https://hdt.lod.labs.vu.nl/triple/count'
@@ -98,44 +93,10 @@ class LodALot:
 
         return count_triples.text
 
-    def get_instances(self, prop_uri: str, unquote: bool) -> Iterable[str]:
-        """Get all the instances of a particular LMDB class.
-
-        Args:
-            prop_uri: The property values that will be retrieved.
-            unquote: Whether to unquote the string.
-
-        Returns:
-            A map of instances.
-        """
-        if prop_uri == 'subject':
-            results = self.__graph.query("""
-                PREFIX owl: <http://www.w3.org/2002/07/owl#>
-                PREFIX dbo: <http://dbpedia.org/ontology/>
-                SELECT ?sub WHERE {
-                    ?sub a dbo:Film
-            }""")
-            if unquote:
-                return map(self.unquote_uri, results)
-            else:
-                return map(lambda uri_tuple: uri_tuple[0], results)
-        else:
-            pass
-
-    @staticmethod
-    def unquote_uri(uri_tuple: tuple) -> str:
-        """Unquote a URI.
-
-        Returns:
-            An unquoted uri as a string
-        """
-        uri_str = str(uri_tuple[0])
-        return urllib.parse.unquote(uri_str)
-
 
 if __name__ == '__main__':
     lal = LodALot(os.path.join('..', 'Data', 'LodALot', 'DBPediaFilmTriples.nt'),
                   os.path.join('..', 'Data', 'LodALot', 'DBPediaFilmGraph.pkl'))
-    lal.get_triples(sub="",
-                    pred="<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>",
-                    obj='<http://dbpedia.org/ontology/Film>')
+    lal.build_graph_from_triples(sub="",
+                                 pred="<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>",
+                                 obj='<http://dbpedia.org/ontology/Film>')

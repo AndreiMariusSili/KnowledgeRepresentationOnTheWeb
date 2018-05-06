@@ -1,6 +1,5 @@
 import os
 import pickle
-import urllib.parse
 from typing import Iterable
 
 import rdflib
@@ -51,10 +50,8 @@ class LMDB:
         self._malformed_file = open(self._malformed_file_path, 'ab+')
 
         if os.path.isfile(self._graph_file_path):
-            logging.info('Loading graph from pickle.')
             self._graph_file = open(self._graph_file_path, 'rb')
             self._graph: rdflib.Graph = pickle.load(self._graph_file)
-            logging.info('Loading done.')
         else:
             logging.info('No graph file to load.')
             self._graph_file = open(self._graph_file_path, 'wb+')
@@ -63,10 +60,13 @@ class LMDB:
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        self._original_file.close()
-        self._cleaned_file.close()
-        self._malformed_file.close()
-        self._graph_file.close()
+        if self.graph_only:
+            self._graph_file.close()
+        else:
+            self._original_file.close()
+            self._cleaned_file.close()
+            self._malformed_file.close()
+            self._graph_file.close()
 
     def build_valid_graph(self) -> rdflib.Graph:
         """Build and save a valid graph from the n-tuples dump. Processing is done asynchronously.
@@ -93,38 +93,31 @@ class LMDB:
 
         return valid_graph
 
-    def get_instances(self, cls_uri: str, prop_uri: str, unquote: bool) -> Iterable[str]:
-        """Get all the instances of a particular LMDB class.
+    def extract_graph(self, cls: str) -> rdflib.Graph:
+        """Extract all triples of a class from the graph to a new graph
 
         Args:
-            cls_uri: The URI of the class for which instances will be retrieved.
-            prop_uri: the property values that will be retrieved.
-            unquote: Whether to unquote the property uri.
+            cls: The class to extract.
 
         Returns:
-            Dictionary of instances.
+            The new graph.
         """
         results = self._graph.query("""
-            PREFIX owl: <http://www.w3.org/2002/07/owl#>
-            PREFIX lmdbm: <http://data.linkedmdb.org/resource/movie/>
-            SELECT ?obj WHERE {{
-                ?sub rdf:type {cls} .
-                ?sub {prop} ?obj .
-            }}""".format(cls=cls_uri, prop=prop_uri))
-        if unquote:
-            return map(self.unquote_uri, results)
-        else:
-            return map(lambda x: x, results)
+                    PREFIX lmdbm: <http://data.linkedmdb.org/resource/movie/>
+                    SELECT ?sub ?pred ?obj WHERE {{
+                        ?sub ?pred ?obj .
+                        ?sub rdf:type lmdbm:{} .
+                    }}""".format(cls))
+        new_graph = rdflib.Graph()
+        for result in results:
+            new_graph.add(result)
 
-    @staticmethod
-    def unquote_uri(uri_tuple: tuple) -> str:
-        """Unquote a URI.
+        if cls == 'film':
+            pickle.dump(new_graph, open(os.path.join(self._data_path, 'FilmGraph.pkl'), 'wb+'))
+        elif cls == 'actor':
+            pickle.dump(new_graph, open(os.path.join(self._data_path, 'ActorGraph.pkl'), 'wb+'))
 
-        Returns:
-            An unquoted uri as a string
-        """
-        uri_str = str(uri_tuple[0])
-        return urllib.parse.unquote(uri_str)
+        return new_graph
 
     @staticmethod
     def clean_triples(triples: Iterable[str]):
@@ -150,5 +143,6 @@ class LMDB:
 
 
 if __name__ == '__main__':
-    with LMDB(data_path=os.path.join('..', 'Data', 'LMDB')) as lmdb:
-        lmdb.build_valid_graph()
+    with LMDB(data_path=os.path.join('..', 'Data', 'LMDB'), graph_only=True) as lmdb:
+        # lmdb.build_valid_graph()
+        lmdb.extract_graph('actor')
