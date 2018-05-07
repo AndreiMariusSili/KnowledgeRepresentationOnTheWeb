@@ -1,6 +1,7 @@
 import logging
 import os
 import pickle
+import time
 
 import rdflib
 import requests
@@ -37,7 +38,9 @@ class LodALot:
         page_size = 1000
         headers = {'Accept': 'application/n-triples'}
         url = 'https://hdt.lod.labs.vu.nl/triple'
-        max_pages = int(self.count_triples('<http://dbpedia.org/ontology/Film>')) / page_size
+        count = self.count_triples(str(obj))
+        max_pages = round(int(count) / page_size)
+        print(max_pages)
         payload = {
             'page': str(page),
             'page_size': '1000',
@@ -47,8 +50,14 @@ class LodALot:
             'g': '<https://hdt.lod.labs.vu.nl/graph/LOD-a-lot>'
         }
 
-        r = requests.head(url=url, params=payload, headers=headers)
-        req_triples = requests.get(r.url, headers=headers)
+        status_code = 0
+        req_triples = None
+        while status_code != 200:
+            r = requests.head(url=url, params=payload, headers=headers)
+            req_triples = requests.get(r.url, headers=headers)
+            status_code = int(req_triples.status_code)
+            print("FIRST REQUEST: ", req_triples.status_code)
+            time.sleep(.2)
 
         with open(self.__file_path, 'a+') as triple_file:
             triple_file.write(req_triples.text)
@@ -56,7 +65,13 @@ class LodALot:
         while True:
             page += 1
             payload['page'] = str(page)
-            req_triples = requests.get(url, params=payload, headers=headers)
+
+            status_code = 0
+            while status_code != 200:
+                req_triples = requests.get(url, params=payload, headers=headers)
+                status_code = int(req_triples.status_code)
+                print("SUBSEQUENT REQUEST:", req_triples.status_code)
+                time.sleep(.2)
 
             with open(self.__file_path, 'a+') as triple_file:
                 triple_file.write(req_triples.text)
@@ -89,14 +104,28 @@ class LodALot:
         headers = {'Accept': 'application/json'}
         payload = {'o': str(obj), 'g': '<https://hdt.lod.labs.vu.nl/graph/LOD-a-lot>'}
         url = 'https://hdt.lod.labs.vu.nl/triple/count'
-        count_triples = requests.get(url, headers=headers, params=payload)
+        status_code = 0
+        count_triples = 0
+        while status_code != 200:
+            count_triples = requests.get(url, headers=headers, params=payload)
+            status_code = count_triples.status_code
+            print("COUNT REQUEST:", status_code)
+            time.sleep(.2)
 
         return count_triples.text
 
 
 if __name__ == '__main__':
-    lal = LodALot(os.path.join('..', 'Data', 'LodALot', 'DBPediaFilmTriples.nt'),
-                  os.path.join('..', 'Data', 'LodALot', 'DBPediaFilmGraph.pkl'))
+    # GET ALL FILM INSTANCES FROM DBPEDIA
+    # lal = LodALot(os.path.join('..', 'Data', 'LodALot', 'DBPediaFilmTriples.nt'),
+    #               os.path.join('..', 'Data', 'LodALot', 'DBPediaFilmGraph.pkl'))
+    # lal.build_graph_from_triples(sub="",
+    #                              pred="<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>",
+    #                              obj='<http://dbpedia.org/ontology/Film>')
+
+    # GET ALL ACTOR INSTANCES FROM DBPEDIA
+    lal = LodALot(os.path.join('..', 'Data', 'LodALot', 'DBPediaActorTriples.nt'),
+                  os.path.join('..', 'Data', 'LodALot', 'DBPediaActorGraph.pkl'))
     lal.build_graph_from_triples(sub="",
                                  pred="<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>",
-                                 obj='<http://dbpedia.org/ontology/Film>')
+                                 obj='<http://dbpedia.org/ontology/Actor>')
