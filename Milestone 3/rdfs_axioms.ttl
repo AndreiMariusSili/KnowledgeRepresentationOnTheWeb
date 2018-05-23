@@ -1,6 +1,5 @@
 @prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
-
 rdf:type rdf:type rdf:Property .
 rdf:subject rdf:type rdf:Property .
 rdf:predicate rdf:type rdf:Property .
@@ -10,7 +9,6 @@ rdf:rest rdf:type rdf:Property .
 rdf:value rdf:type rdf:Property .
 rdf:nil rdf:type rdf:List .
 rdf:_1 rdf:type rdf:Property .
-
 rdf:type rdfs:domain rdfs:Resource .
 rdfs:domain rdfs:domain rdf:Property .
 rdfs:range rdfs:domain rdf:Property .
@@ -27,7 +25,6 @@ rdfs:isDefinedBy rdfs:domain rdfs:Resource .
 rdfs:comment rdfs:domain rdfs:Resource .
 rdfs:label rdfs:domain rdfs:Resource .
 rdf:value rdfs:domain rdfs:Resource .
-
 rdf:type rdfs:range rdfs:Class .
 rdfs:domain rdfs:range rdfs:Class .
 rdfs:range rdfs:range rdfs:Class .
@@ -44,16 +41,12 @@ rdfs:isDefinedBy rdfs:range rdfs:Resource .
 rdfs:comment rdfs:range rdfs:Literal .
 rdfs:label rdfs:range rdfs:Literal .
 rdf:value rdfs:range rdfs:Resource .
-
 rdf:Alt rdfs:subClassOf rdfs:Container .
 rdf:Bag rdfs:subClassOf rdfs:Container .
 rdf:Seq rdfs:subClassOf rdfs:Container .
 rdfs:ContainerMembershipProperty rdfs:subClassOf rdf:Property .
-
 rdfs:isDefinedBy rdfs:subPropertyOf rdfs:seeAlso .
-
 rdfs:Datatype rdfs:subClassOf rdfs:Class .
-
 rdf:_1 rdf:type rdfs:ContainerMembershipProperty .
 rdf:_1 rdfs:domain rdfs:Resource .
 rdf:_1 rdfs:range rdfs:Resource .
